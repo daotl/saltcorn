@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   saltcorn-app:
-    image: saltcorn/saltcorn
+    image: saltcorn/saltcorn:0.6.2
     container_name: saltcorn
     depends_on:
       - saltcorn-db
@@ -10,23 +10,23 @@ services:
     restart: always
     networks:
       - saltcorn
-    ports: #not needed if using traefik
-      - "3000:3000"
+      - web
+    expose:
+      - 3000
     environment:
       - SALTCORN_SESSION_SECRET=${SALTCORN_SECRET}
       - PGHOST=saltcorn-db
       - PGUSER=${PGUSER}
       - PGDATABASE=${PGDATABASE}
       - PGPASSWORD=${PGPASSWORD}
-    labels: # If using traefik to reverse proxy into saltcorn
-      - traefik.http.routers.saltcorn-app.rule=Host(`saltcorn.${DOMAIN}`)
-      - traefik.http.routers.saltcorn-app.entrypoints=secure
-      - traefik.http.routers.saltcorn-app.tls.certresolver=leresolver
-      - traefik.http.services.saltcorn-app.loadbalancer.server.port=3000
-      - traefik.enable=true
-    
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.saltcorn-app.entryPoints: web
+      traefik.http.routers.saltcorn-app.tls.certResolver: default
+      traefik.http.routers.saltcorn-app.rule: Host(`saltcorn.${DOMAIN}`)
+
   saltcorn-db:
-    image: postgres:13-alpine
+    image: postgres:13.5-alpine
     container_name: saltcorn-db
     restart: always
     networks:
@@ -42,3 +42,12 @@ services:
 networks:
   saltcorn:
     name: saltcorn-net
+  web:
+    external: true
+
+volumes:
+  postgres:
+    driver_opts:
+      type: none
+      device: ${VOLUMES_ROOT}/postgres
+      o: bind
